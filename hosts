@@ -1,0 +1,10 @@
+---
+master:
+  hosts:
+    s00:
+      ansible_host: 10.100.0.150
+
+minions:
+  hosts:
+    s01: ansible_host: 10.100.0.151
+    s02: ansible_host: 10.100.0.151

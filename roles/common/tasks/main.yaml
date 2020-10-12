@@ -1,0 +1,72 @@
+- name: add kubernetes repo gpg signing key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+  become: yes
+
+- name: add kubernetes repo
+  apt_repository:
+    repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+    state: present
+  become: yes
+
+- name: Update all packages to latest version
+  apt:
+    name: "*"
+    state: latest
+  become: yes
+
+- name: Install common packages
+  apt:
+    pkg:
+    - tmux
+    - tcpdump
+    - traceroute
+    - bash-completion
+    - docker.io
+    - kubeadm
+    - kubelet
+    - kubectl
+  become: yes
+
+- name: Start and enable docker.service
+  service: name=docker.service state=started enabled=yes
+  become: yes
+
+- name: Enable ntp
+  command: /usr/bin/timedatectl set-ntp true
+  become: yes
+
+- name: Set timezone
+  command: /usr/bin/timedatectl set-timezone Europe/Madrid
+  become: yes
+
+- name: Copy timesyncd config
+  copy: src=timesyncd.conf dest=/etc/systemd/timesyncd.conf
+  become: yes
+
+- name: Start and enable time sync
+  service: name=systemd-timesyncd.service state=started enabled=yes
+  become: yes
+
+- name: Write cluster hostnames in local /etc/hosts
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: "{{ hostvars[item].ansible_host }} {{item}}"
+    state: present
+  when: hostvars[item].ansible_host is defined
+  with_items: "{{ groups.all }}"
+  become: yes
+
+- name: swapoff
+  shell: |
+    swapoff -a
+  become: yes
+
+- name: disable swap from fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^(.*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  become: yes

@@ -1,0 +1,36 @@
+- name: render Calico config
+  template:
+    src: calico.j2
+    dest: calico.yaml
+  become: no
+
+- name: render kubeadm config
+  template:
+    src: kubeadm-config.j2
+    dest: kubeadm-config.yaml
+  become: no
+
+- name: initialize the cluster
+  shell: kubeadm init --config=kubeadm-config.yaml --upload-certs >> kubeadm-init.txt
+  become: yes
+
+- name: create .kube directory
+  file:
+    path: .kube
+    state: directory
+    mode: 0700
+  become: no
+
+- name: .kube/config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: .kube/config
+    remote_src: yes
+  become: yes
+
+- name: apply Calico network plugin
+  shell: kubectl apply -f calico.yaml
+  become: no
+
+- name: configure completions
+  shell: echo "source <(kubectl completion bash)" >> .bashrc
